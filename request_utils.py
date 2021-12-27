@@ -1,4 +1,3 @@
-import json
 import requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -14,26 +13,61 @@ def get_location_data(postal_code: str) -> dict:
     headers = {'accept': 'application/json, text/plain, */*',
                'authorization': AUTH_STR, 'x-trimoz-role': 'public'}
 
-    location_dict = json.loads(requests.get(
-        url, headers=headers, params=payload).text)
+    location_dict = requests.get(url, headers=headers, params=payload).json()
 
     return location_dict
 
 
-def get_appointments(postal_code: str, lat: float, lng: float, service_id: int) -> dict:
+def get_appointments(postal_code: str, lat: float, lng: float, service_unified_id: int) -> dict:
     ''' Get appointment data from location information '''
 
     today = datetime.today().strftime("%Y-%m-%d")
     end_date = (datetime.today() + relativedelta(months=4)
                 ).strftime("%Y-%m-%d")
     payload = {'dateStart': today, 'dateStop': end_date, 'latitude': lat, 'longitude': lng,
-               'maxDistance': 1000, 'serviceUnified': service_id, 'postalCode': postal_code, 'page': 0}
-    dates_url = f'https://api3.clicsante.ca/v3/availabilities'
+               'maxDistance': 1000, 'serviceUnified': service_unified_id, 'postalCode': postal_code, 'page': 0}
+    dates_url = 'https://api3.clicsante.ca/v3/availabilities'
+    headers = {'accept': 'application/json, text/plain, */*', 'authorization': AUTH_STR,
+               'product': 'clicsante', 'x-trimoz-role': 'public'}
+
+    apt_request = requests.get(
+        dates_url, headers=headers, params=payload)
+    appointments = apt_request.json()
+
+    return appointments
+
+
+def get_establishment_services(establishment_id: int) -> list:
+    ''' Get services offered by establishment '''
+
+    url = f'https://api3.clicsante.ca/v3/establishments/{establishment_id}/services'
+    payload = {'settings': True}
+
+    headers = {'accept': 'application/json, text/plain, */*',
+               'authorization': AUTH_STR, 'product': 'clicsante', 'x-trimoz-role': 'public'}
+
+    apt_request = requests.get(url, headers=headers, params=payload)
+    services = apt_request.json()
+
+    return services
+
+
+def get_first_appointment(establishment_id: int, place_id: int, establishment_unified_id: int) -> dict:
+    ''' Get first available appoinment at a particular establishment, place. '''
+
+    url = f'https://api3.clicsante.ca/v3/establishments/{establishment_id}/availabilities/first'
+    payload = {'places': place_id, 'service': establishment_unified_id, 'timezone': 'America/Toronto',
+               'filter1': 'undefined', 'filter2': 'undefined', 'filter3': 'undefined'}
+
     dates_headers = {'accept': 'application/json, text/plain, */*', 'authorization': AUTH_STR,
                      'product': 'clicsante', 'x-trimoz-role': 'public'}
 
     apt_request = requests.get(
-        dates_url, headers=dates_headers, params=payload)
-    appointments = json.loads(apt_request.text)
+        url, headers=dates_headers, params=payload)
 
-    return appointments
+    first_apt = apt_request.json()
+
+    return first_apt
+
+
+
